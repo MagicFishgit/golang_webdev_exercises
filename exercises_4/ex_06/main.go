@@ -6,46 +6,57 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 )
 
-func serve(c net.Conn) {
-	//Read from connection.
-	scanner := bufio.NewScanner(c)
-	for scanner.Scan() {
-		ln := scanner.Text()
-		if ln == "" { //end of HTTP Request Headers
-			break
+func main() {
+	l, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer l.Close()
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
 		}
-		fmt.Println(ln)
+		serve(conn)
 	}
 }
 
-func main() {
-
-	//I create a listener on port 8080 and specify to the net package that it should be tc.
-	listener, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		log.Fatalln("Error listening on port.", err)
-	}
-	defer listener.Close() //I need to remember to use defer to close things. Defer runs whatever you give it at the end of the funciton.
-
-	//ive created the connection now I need to specify what it does with incomming connections.
-	for {
-		conn, err := listener.Accept() //accept the connection
-		if err != nil {
-			log.Println(err) //not using fatalln because I dont want the program to end if it got a failed connection.
-			continue
+func serve(c net.Conn) {
+	defer c.Close()
+	scanner := bufio.NewScanner(c)
+	var i int
+	var rMethod, rURI string
+	for scanner.Scan() {
+		ln := scanner.Text()
+		fmt.Println(ln)
+		if i == 0 {
+			// we're in REQUEST LINE
+			xs := strings.Fields(ln)
+			rMethod = xs[0]
+			rURI = xs[1]
+			fmt.Println("METHOD:", rMethod)
+			fmt.Println("URI:", rURI)
 		}
-
-		//Serve the connection
-		go serve(conn)
-
-		//write to the connection
-		io.WriteString(conn, "Hey there buddy! You are connected.")
-
-		defer conn.Close()
-
-		fmt.Println("Code got here")
+		if ln == "" {
+			// when ln is empty, header is done
+			fmt.Println("THIS IS THE END OF THE HTTP REQUEST HEADERS")
+			break
+		}
+		i++
 	}
-
+	body := "CHECK OUT THE RESPONSE BODY PAYLOAD"
+	body += "\n"
+	body += rMethod
+	body += "\n"
+	body += rURI
+	io.WriteString(c, "HTTP/1.1 200 OK\r\n")
+	fmt.Fprintf(c, "Content-Length: %d\r\n", len(body))
+	fmt.Fprint(c, "Content-Type: text/plain\r\n")
+	io.WriteString(c, "\r\n")
+	io.WriteString(c, body)
 }
