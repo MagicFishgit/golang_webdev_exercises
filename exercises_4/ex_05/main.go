@@ -21,7 +21,13 @@ func serve(c net.Conn) {
 	}
 
 	//Write to the connection
-	io.WriteString(c, "Thanks for talking to me buddy!")
+	body := "CHECK THE BODY RESPONSE PAYLOAD"
+	io.WriteString(c, "HTTP/1.1 200 OK\r\n")
+	fmt.Fprintf(c, "Content-Length: %d\r\n", len(body))
+	fmt.Fprint(c, "Content-Type: text/plain\r\n")
+	fmt.Fprint(c, "Wabalubba: dubdub\r\n")
+	io.WriteString(c, "\r\n") //no clue about this part. return and new line?
+	io.WriteString(c, body)
 }
 
 func main() {
