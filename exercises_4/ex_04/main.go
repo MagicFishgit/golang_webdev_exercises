@@ -8,6 +8,18 @@ import (
 	"net"
 )
 
+func serve(c net.Conn) {
+	//Read from connection.
+	scanner := bufio.NewScanner(c)
+	for scanner.Scan() {
+		ln := scanner.Text()
+		if ln == "" { //end of HTTP Request Headers
+			break
+		}
+		fmt.Println(ln)
+	}
+}
+
 func main() {
 
 	//I create a listener on port 8080 and specify to the net package that it should be tc.
@@ -25,18 +37,11 @@ func main() {
 			continue
 		}
 
+		//Serve the connection
+		go serve(conn)
+
 		//write to the connection
 		io.WriteString(conn, "Hey there buddy! You are connected.")
-
-		//Read from connection.
-		scanner := bufio.NewScanner(conn)
-		for scanner.Scan() {
-			ln := scanner.Text()
-			if ln == "" { //end of HTTP Request Headers
-				break
-			}
-			fmt.Println(ln)
-		}
 
 		defer conn.Close()
 
